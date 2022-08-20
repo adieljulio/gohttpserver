@@ -189,22 +189,6 @@ func main() {
 
 	hdlr = accesslog.NewLoggingHandler(hdlr, logger)
 
-	// HTTP Basic Authentication
-	userpass := strings.SplitN(gcfg.Auth.HTTP, ":", 2)
-	switch gcfg.Auth.Type {
-	case "http":
-		if len(userpass) == 2 {
-			user, pass := userpass[0], userpass[1]
-			hdlr = httpauth.SimpleBasicAuth(user, pass)(hdlr)
-		}
-	case "openid":
-		handleOpenID(gcfg.Auth.OpenID, false) // FIXME(ssx): set secure default to false
-		// case "github":
-		// 	handleOAuth2ID(gcfg.Auth.Type, gcfg.Auth.ID, gcfg.Auth.Secret) // FIXME(ssx): set secure default to false
-	case "oauth2-proxy":
-		handleOauth2()
-	}
-
 	// CORS
 	if gcfg.Cors {
 		hdlr = handlers.CORS()(hdlr)
@@ -221,6 +205,21 @@ func main() {
 		mainRouter.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, gcfg.Prefix, http.StatusTemporaryRedirect)
 		})
+	}
+	// HTTP Basic Authentication
+	userpass := strings.SplitN(gcfg.Auth.HTTP, ":", 2)
+	switch gcfg.Auth.Type {
+	case "http":
+		if len(userpass) == 2 {
+			user, pass := userpass[0], userpass[1]
+			hdlr = httpauth.SimpleBasicAuth(user, pass)(hdlr)
+		}
+	case "openid":
+		handleOpenID(gcfg.Auth.OpenID, false) // FIXME(ssx): set secure default to false
+		// case "github":
+		// 	handleOAuth2ID(gcfg.Auth.Type, gcfg.Auth.ID, gcfg.Auth.Secret) // FIXME(ssx): set secure default to false
+	case "oauth2-proxy":
+		handleOauth2(router)
 	}
 
 	router.PathPrefix("/-/assets/").Handler(http.StripPrefix(gcfg.Prefix+"/-/", http.FileServer(Assets)))
